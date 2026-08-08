@@ -10,7 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check deploy configuration
+        id: deploy_config
+        run: |
+          if [ -z "${{ secrets.EC2_HOST }}" ] || [ -z "${{ secrets.EC2_USER }}" ] || [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy to EC2
+        if: steps.deploy_config.outputs.configured == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -22,4 +32,7 @@ jobs:
 
             echo "Deployment completed successfully"
 
+      - name: Skip deploy when secrets are missing
+        if: steps.deploy_config.outputs.configured != 'true'
+        run: echo "EC2 deployment secrets are not configured, so deployment was skipped."
 
